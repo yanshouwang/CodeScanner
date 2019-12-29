@@ -1,0 +1,11 @@
+{
+	"client":{
+		"cp_id":"890086000300384059",
+		"product_id":"9105385871708358341",
+		"client_id":"262206107265532928",
+		"client_secret":"ADC0640D1622E115132A18BAC1587B7491CA84A381C8CD063B1E20E9CF768C41",
+		"app_id":"101550897",
+		"package_name":"dev.yanshouwang.codescanner"
+	},
+	"configuration_version":"1.0"
+}

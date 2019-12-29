@@ -1,0 +1,2 @@
+include ':app'
+rootProject.name='条码扫描器'
