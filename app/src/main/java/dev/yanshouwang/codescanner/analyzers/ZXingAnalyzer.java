@@ -5,7 +5,6 @@ import android.util.Log;
 
 import androidx.camera.core.ImageProxy;
 
-import com.baidu.mobstat.StatService;
 import com.crashlytics.android.Crashlytics;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.Binarizer;
@@ -50,10 +49,10 @@ public class ZXingAnalyzer extends BaseAnalyzer {
                 format != ImageFormat.YUV_422_888 &&
                 format != ImageFormat.YUV_444_888) {
             String message = String.format("unexpected format: %s", format);
-            Throwable tr = new IllegalArgumentException(message);
-            Log.e(TAG, message, tr);
-            Crashes.trackError(tr);
-            StatService.recordException(null, tr);
+            Throwable throwable = new IllegalArgumentException(message);
+            Log.e(TAG, message, throwable);
+            Crashlytics.logException(throwable);
+            Crashes.trackError(throwable);
             return;
         }
         ByteBuffer buffer = imageProxy.getPlanes()[0].getBuffer();
@@ -76,7 +75,6 @@ public class ZXingAnalyzer extends BaseAnalyzer {
             // 此处非 BUG, 无需记录日志
             //Crashlytics.logException(e);
             //Crashes.trackError(e);
-            //StatService.recordException(null, e);
         }
     }
 }

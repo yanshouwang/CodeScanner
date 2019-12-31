@@ -4,7 +4,6 @@ import android.media.Image;
 
 import androidx.camera.core.ImageProxy;
 
-import com.baidu.mobstat.StatService;
 import com.crashlytics.android.Crashlytics;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
@@ -44,7 +43,6 @@ public class FirebaseMLAnalyzer extends BaseAnalyzer {
             e.printStackTrace();
             Crashlytics.logException(e);
             Crashes.trackError(e);
-            StatService.recordException(null, e);
         }
     }
 

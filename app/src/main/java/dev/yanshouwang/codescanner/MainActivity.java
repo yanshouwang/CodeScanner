@@ -20,7 +20,6 @@ import androidx.camera.core.PreviewConfig;
 import androidx.camera.core.UseCase;
 import androidx.core.app.ActivityCompat;
 
-import com.baidu.mobstat.StatService;
 import com.microsoft.appcenter.AppCenter;
 import com.microsoft.appcenter.analytics.Analytics;
 import com.microsoft.appcenter.crashes.Crashes;
@@ -31,7 +30,6 @@ import java.util.concurrent.Executors;
 import dev.yanshouwang.codescanner.analyzers.Barcode;
 import dev.yanshouwang.codescanner.analyzers.BaseAnalyzer;
 import dev.yanshouwang.codescanner.analyzers.FirebaseMLAnalyzer;
-import dev.yanshouwang.codescanner.analyzers.ZXingAnalyzer;
 import dev.yanshouwang.codescanner.util.PermissionUtils;
 
 public class MainActivity extends AppCompatActivity {
@@ -46,7 +44,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         Application application = getApplication();
         AppCenter.start(application, APP_SECRET, Analytics.class, Crashes.class);
-        StatService.start(this);
         setContentView(R.layout.activity_main);
         mCameraView = findViewById(R.id.main_camera);
         mCameraView.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> updateTransform());

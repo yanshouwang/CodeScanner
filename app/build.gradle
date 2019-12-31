@@ -32,7 +32,6 @@ dependencies {
     implementation "com.google.firebase:firebase-ml-vision-barcode-model:$rootProject.firebaseMLVisionBarcodeModelVersion"
     implementation "com.microsoft.appcenter:appcenter-analytics:$rootProject.appcenterVersion"
     implementation "com.microsoft.appcenter:appcenter-crashes:$rootProject.appcenterVersion"
-    implementation "com.baidu.mobstat:mtj-sdk:$rootProject.mtjVersion"
     implementation "androidx.appcompat:appcompat:$rootProject.appcompatVersion"
     implementation "androidx.constraintlayout:constraintlayout:$rootProject.constraintlayoutVersion"
     implementation "androidx.camera:camera-core:$rootProject.cameraVersion"
