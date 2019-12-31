@@ -2,33 +2,36 @@ package dev.yanshouwang.codescanner;
 
 import android.Manifest;
 import android.app.Application;
-import android.content.Context;
-import android.content.pm.PackageManager;
 import android.graphics.Matrix;
 import android.graphics.SurfaceTexture;
 import android.os.Bundle;
 import android.view.Surface;
 import android.view.TextureView;
-import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraX;
+import androidx.camera.core.ImageAnalysis;
+import androidx.camera.core.ImageAnalysisConfig;
 import androidx.camera.core.Preview;
 import androidx.camera.core.PreviewConfig;
+import androidx.camera.core.UseCase;
 import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 
 import com.baidu.mobstat.StatService;
 import com.microsoft.appcenter.AppCenter;
 import com.microsoft.appcenter.analytics.Analytics;
 import com.microsoft.appcenter.crashes.Crashes;
 
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
+import dev.yanshouwang.codescanner.analyzers.Barcode;
+import dev.yanshouwang.codescanner.analyzers.BaseAnalyzer;
+import dev.yanshouwang.codescanner.analyzers.FirebaseMLAnalyzer;
+import dev.yanshouwang.codescanner.analyzers.ZXingAnalyzer;
 import dev.yanshouwang.codescanner.util.PermissionUtils;
 
 public class MainActivity extends AppCompatActivity {
@@ -37,7 +40,6 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_SCAN_CODE = 138;
 
     private TextureView mCameraView;
-    private ExecutorService mExecutor = Executors.newSingleThreadExecutor();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,11 +85,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startScan() {
-        setupPreview();
-        setupAnalysis();
+        UseCase preview = buildPreviewUseCase();
+        UseCase analysis = buildAnalysisUseCase();
+        CameraX.bindToLifecycle(this, preview, analysis);
     }
 
-    private void setupPreview() {
+    private UseCase buildPreviewUseCase() {
         PreviewConfig config = new PreviewConfig.Builder().build();
         Preview preview = new Preview(config);
         preview.setOnPreviewOutputUpdateListener(output -> {
@@ -99,11 +102,23 @@ public class MainActivity extends AppCompatActivity {
             mCameraView.setSurfaceTexture(texture);
             updateTransform();
         });
-        CameraX.bindToLifecycle(this, preview);
+        return preview;
     }
 
-    private void setupAnalysis() {
+    private UseCase buildAnalysisUseCase() {
+        ImageAnalysisConfig config = new ImageAnalysisConfig.Builder()
+                .setImageReaderMode(ImageAnalysis.ImageReaderMode.ACQUIRE_LATEST_IMAGE)
+                .build();
+        ImageAnalysis analysis = new ImageAnalysis(config);
+        Executor executor = Executors.newSingleThreadExecutor();
+        BaseAnalyzer analyzer = new FirebaseMLAnalyzer();
+        analyzer.addBarcodeAnalyzedListener(this::onBarcodeAnalyzed);
+        analysis.setAnalyzer(executor, analyzer);
+        return analysis;
+    }
 
+    private void onBarcodeAnalyzed(Barcode barcode) {
+        runOnUiThread(() -> Toast.makeText(this, barcode.getText(), Toast.LENGTH_SHORT).show());
     }
 
     @Override

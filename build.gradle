@@ -4,9 +4,12 @@ buildscript {
     repositories {
         google()
         jcenter()
+        maven { url 'https://maven.fabric.io/public/' }
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:3.5.3'
+        classpath 'com.google.gms:google-services:4.3.2'
+        classpath 'io.fabric.tools:gradle:1.31.2'
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
     }
@@ -30,12 +33,17 @@ ext {
     versionCode = 1
     versionName = "1.0"
     // Dependencies
+    firebaseVersion = '17.2.1'
+    firebaseCrashlyticsVersion = '2.10.1'
+    firebaseMLVisionVersion = '24.0.1'
+    firebaseMLVisionBarcodeModelVersion = '16.0.2'
     appcenterVersion = '2.5.1'
     mtjVersion = '3.9.7.0'
     appcompatVersion = '1.1.0'
     constraintlayoutVersion = '1.1.3'
     cameraVersion = '1.0.0-alpha06'
-    zxingVersion = '3.4.0'
+    // ZXing 3.4.0 需要 minSDKVersion =24, https://github.com/zxing/zxing/issues/1170
+    zxingVersion = '3.3.3'
     junitVersion = '4.12'
     extJunitVersion = '1.1.1'
     espressoVersion = '3.2.0'

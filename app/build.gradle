@@ -1,4 +1,6 @@
 apply plugin: 'com.android.application'
+apply plugin: 'com.google.gms.google-services'
+apply plugin: 'io.fabric'
 
 android {
     compileSdkVersion rootProject.compileSdkVersion
@@ -24,6 +26,10 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation "com.google.firebase:firebase-analytics:$rootProject.firebaseVersion"
+    implementation "com.crashlytics.sdk.android:crashlytics:$rootProject.firebaseCrashlyticsVersion"
+    implementation "com.google.firebase:firebase-ml-vision:$rootProject.firebaseMLVisionVersion"
+    implementation "com.google.firebase:firebase-ml-vision-barcode-model:$rootProject.firebaseMLVisionBarcodeModelVersion"
     implementation "com.microsoft.appcenter:appcenter-analytics:$rootProject.appcenterVersion"
     implementation "com.microsoft.appcenter:appcenter-crashes:$rootProject.appcenterVersion"
     implementation "com.baidu.mobstat:mtj-sdk:$rootProject.mtjVersion"
