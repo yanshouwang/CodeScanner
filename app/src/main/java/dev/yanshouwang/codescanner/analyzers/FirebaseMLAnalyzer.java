@@ -1,8 +1,6 @@
 package dev.yanshouwang.codescanner.analyzers;
 
-import android.media.Image;
-
-import androidx.camera.core.ImageProxy;
+import android.graphics.Rect;
 
 import com.crashlytics.android.Crashlytics;
 import com.google.android.gms.tasks.Task;
@@ -19,14 +17,18 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 public class FirebaseMLAnalyzer extends BaseAnalyzer {
+    public FirebaseMLAnalyzer(Rect focused) {
+        super(focused);
+    }
+
     @Override
-    protected void analyzeSynchronous(ImageProxy imageProxy, int degrees) {
-        if (imageProxy == null || imageProxy.getImage() == null) {
-            return;
-        }
-        Image image = imageProxy.getImage();
-        int rotation = degrees2Rotation(degrees);
-        FirebaseVisionImage firebaseImage = FirebaseVisionImage.fromMediaImage(image, rotation);
+    protected void analyze(byte[] data, int dataWidth, int dataHeight) {
+        FirebaseVisionImageMetadata metadata = new FirebaseVisionImageMetadata.Builder()
+                .setFormat(FirebaseVisionImageMetadata.IMAGE_FORMAT_NV21)
+                .setWidth(dataWidth)
+                .setHeight(dataHeight)
+                .build();
+        FirebaseVisionImage firebaseImage = FirebaseVisionImage.fromByteArray(data, metadata);
         FirebaseVisionBarcodeDetectorOptions options = new FirebaseVisionBarcodeDetectorOptions.Builder()
                 .setBarcodeFormats(FirebaseVisionBarcode.FORMAT_ALL_FORMATS).build();
         FirebaseVisionBarcodeDetector detector = FirebaseVision.getInstance().getVisionBarcodeDetector(options);
@@ -43,21 +45,6 @@ public class FirebaseMLAnalyzer extends BaseAnalyzer {
             e.printStackTrace();
             Crashlytics.logException(e);
             Crashes.trackError(e);
-        }
-    }
-
-    private int degrees2Rotation(int degrees) {
-        switch (degrees) {
-            case 0:
-                return FirebaseVisionImageMetadata.ROTATION_0;
-            case 90:
-                return FirebaseVisionImageMetadata.ROTATION_90;
-            case 180:
-                return FirebaseVisionImageMetadata.ROTATION_180;
-            case 270:
-                return FirebaseVisionImageMetadata.ROTATION_270;
-            default:
-                throw new IllegalArgumentException("Rotation must be 0, 90, 180 or 270.");
         }
     }
 }

@@ -3,6 +3,7 @@ package dev.yanshouwang.codescanner;
 import android.Manifest;
 import android.app.Application;
 import android.graphics.Matrix;
+import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
 import android.os.Bundle;
 import android.view.Surface;
@@ -28,8 +29,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import dev.yanshouwang.codescanner.analyzers.Barcode;
-import dev.yanshouwang.codescanner.analyzers.BaseAnalyzer;
 import dev.yanshouwang.codescanner.analyzers.FirebaseMLAnalyzer;
+import dev.yanshouwang.codescanner.analyzers.IAnalyzer;
 import dev.yanshouwang.codescanner.util.PermissionUtils;
 
 public class MainActivity extends AppCompatActivity {
@@ -37,7 +38,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String[] REQUEST_SCAN_PERMISSIONS = new String[]{Manifest.permission.CAMERA};
     private static final int REQUEST_SCAN_CODE = 138;
 
-    private TextureView mCameraView;
+    private TextureView mPreviewView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,11 +46,11 @@ public class MainActivity extends AppCompatActivity {
         Application application = getApplication();
         AppCenter.start(application, APP_SECRET, Analytics.class, Crashes.class);
         setContentView(R.layout.activity_main);
-        mCameraView = findViewById(R.id.main_camera);
-        mCameraView.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> updateTransform());
+        mPreviewView = findViewById(R.id.main_camera);
+        mPreviewView.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> updateTransform());
         boolean isGranted = PermissionUtils.checkIsPermissionsGranted(this, REQUEST_SCAN_PERMISSIONS);
         if (isGranted) {
-            mCameraView.post(this::startScan);
+            mPreviewView.post(this::startScan);
         } else {
             ActivityCompat.requestPermissions(this, REQUEST_SCAN_PERMISSIONS, REQUEST_SCAN_CODE);
         }
@@ -57,10 +58,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateTransform() {
         Matrix matrix = new Matrix();
-        float centerX = mCameraView.getWidth() / 2.0F;
-        float centerY = mCameraView.getHeight() / 2.0F;
+        float centerX = mPreviewView.getWidth() / 2.0F;
+        float centerY = mPreviewView.getHeight() / 2.0F;
         float degrees;
-        int rotation = mCameraView.getDisplay().getRotation();
+        int rotation = mPreviewView.getDisplay().getRotation();
         switch (rotation) {
             case Surface.ROTATION_0:
                 degrees = 0.0F;
@@ -78,7 +79,7 @@ public class MainActivity extends AppCompatActivity {
                 return;
         }
         matrix.postRotate(-degrees, centerX, centerY);
-        mCameraView.setTransform(matrix);
+        mPreviewView.setTransform(matrix);
     }
 
     private void startScan() {
@@ -92,11 +93,11 @@ public class MainActivity extends AppCompatActivity {
         Preview preview = new Preview(config);
         preview.setOnPreviewOutputUpdateListener(output -> {
             // To update the SurfaceTexture, we have to remove it and re-add it
-            ViewGroup parent = (ViewGroup) mCameraView.getParent();
-            parent.removeView(mCameraView);
-            parent.addView(mCameraView, 0);
+            ViewGroup parent = (ViewGroup) mPreviewView.getParent();
+            parent.removeView(mPreviewView);
+            parent.addView(mPreviewView, 0);
             SurfaceTexture texture = output.getSurfaceTexture();
-            mCameraView.setSurfaceTexture(texture);
+            mPreviewView.setSurfaceTexture(texture);
             updateTransform();
         });
         return preview;
@@ -108,8 +109,13 @@ public class MainActivity extends AppCompatActivity {
                 .build();
         ImageAnalysis analysis = new ImageAnalysis(config);
         Executor executor = Executors.newSingleThreadExecutor();
-        BaseAnalyzer analyzer = new FirebaseMLAnalyzer();
-        analyzer.addBarcodeAnalyzedListener(this::onBarcodeAnalyzed);
+        int left = 0;
+        int top = 0;
+        int right = 640 / 2;
+        int bottom = 480 / 2;
+        Rect focused = new Rect(left, top, right, bottom);
+        IAnalyzer analyzer = new FirebaseMLAnalyzer(focused);
+        analyzer.addAnalyzedListener(this::onBarcodeAnalyzed);
         analysis.setAnalyzer(executor, analyzer);
         return analysis;
     }
@@ -124,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == REQUEST_SCAN_CODE) {
             boolean isGranted = PermissionUtils.checkIsPermissionsGranted(this, REQUEST_SCAN_PERMISSIONS);
             if (isGranted) {
-                mCameraView.post(this::startScan);
+                mPreviewView.post(this::startScan);
             } else {
                 Toast.makeText(this, "关键权限被用户拒绝", Toast.LENGTH_SHORT).show();
                 finish();
