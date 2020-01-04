@@ -1,5 +1,6 @@
 package dev.yanshouwang.codescanner.views;
 
+import android.animation.Animator;
 import android.animation.TimeInterpolator;
 import android.animation.ValueAnimator;
 import android.content.Context;
@@ -11,156 +12,210 @@ import android.graphics.Path;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.util.AttributeSet;
-import android.view.View;
 import android.view.animation.LinearInterpolator;
 
 import androidx.annotation.Nullable;
 
-public class ScannerView extends View {
+public class ScannerView extends BaseScannerView {
     private static final String TAG = ScannerView.class.getSimpleName();
 
-    private Path mMeshGrid; // 网格
-    private RectF mMeshBoard;
-    private int mGridColumnCount;
-    private int mGridRowCount;
-    private Paint mGridFillPaint;
-    private int mGridFillColor;
-    private Shader mGridFillShader;
-    private Paint mGridStrokePaint;
-    private int mGridStrokeColor;
-    private Shader mGridStrokeShader;
-    private int mGridStrokeWidth;
-    private float mMeshScale;
-    private float mMeshLeft;
-    private float mMeshRight;
-    private float mMeshTop;
-    private float mMeshBottom;
-    private float mOffset;
-    private ValueAnimator mGridAnimator;
+    private Path mMesh; // 网格
+    private RectF mBorder; // 作图边界
+    private int mMeshMinorCount;
+    private Paint mBorderFillPaint;
+    private int[] mBorderFillColors;
+    private Paint mMeshStrokePaint;
+    private int[] mMeshStrokeColors;
+    private float[] mPositions;
+    private float mXCursor;
+    private float mYCursor;
+    private ValueAnimator mCursorAnimator;
+    private boolean mIsAutoReverse;
+    private int mCurrentCount;
 
     //region 构造
     public ScannerView(Context context) {
         super(context);
-        initialize();
+        init();
     }
 
     public ScannerView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
-        initialize();
+        init();
     }
 
     public ScannerView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        initialize();
+        init();
     }
 
     public ScannerView(Context context, @Nullable AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
-        initialize();
+        init();
     }
     //endregion
 
-    private void initialize() {
-        this.mGridStrokeWidth = 1;
-        this.mGridColumnCount = 20;
-        this.mGridRowCount = 20;
-        this.mOffset = 40F;
-        this.mGridFillColor = Color.argb(100, 0, 255, 0);
-        this.mGridStrokeColor = Color.GREEN;
-        this.mMeshScale = 0.9F;
-    }
-
-    private void initGridFillPaint(float x0, float y0, float x1, float y1) {
-        this.mGridFillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        this.mGridFillPaint.setStyle(Paint.Style.FILL);
-        int[] colors = new int[]{Color.TRANSPARENT, this.mGridFillColor};
-        float[] positions = new float[]{0.5F, 1F};
-        this.mGridFillShader = new LinearGradient(x0, y0, x1, y1, colors, positions, Shader.TileMode.CLAMP);
-        this.mGridFillPaint.setShader(this.mGridFillShader);
-    }
-
-    private void initGridStrokePaint(float x0, float y0, float x1, float y1) {
-        this.mGridStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        this.mGridStrokePaint.setStyle(Paint.Style.STROKE);
-        this.mGridStrokePaint.setStrokeWidth(this.mGridStrokeWidth);
-        int[] colors = new int[]{Color.TRANSPARENT, this.mGridStrokeColor};
-        float[] positions = new float[]{0.5F, 1F};
-        this.mGridStrokeShader = new LinearGradient(x0, y0, x1, y1, colors, positions, Shader.TileMode.CLAMP);
-        this.mGridStrokePaint.setShader(this.mGridStrokeShader);
-    }
-
-    private void initGridPath(float left, float top, float width, float height) {
-        this.mMeshGrid = new Path();
-        float xUnit = width / this.mGridColumnCount;
-        float yUnit = height / this.mGridRowCount;
-        // Columns 列
-        for (int i = 0; i <= this.mGridColumnCount; i++) {
-            float x = left + i * xUnit;
-            float bottom = top + height;
-            this.mMeshGrid.moveTo(x, top);
-            this.mMeshGrid.lineTo(x, bottom);
-        }
-        // Rows 行
-        for (int i = 0; i <= this.mGridRowCount; i++) {
-            float y = top + i * yUnit;
-            float right = left + width;
-            this.mMeshGrid.moveTo(left, y);
-            this.mMeshGrid.lineTo(right, y);
-        }
-    }
-
-    private void initMeshBoard(float left, float top, float width, float height) {
-        float right = left + width;
-        float bottom = top + height;
-        this.mMeshBoard = new RectF(left, top, right, bottom);
-    }
-
-    @Override
-    protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
-        super.onLayout(changed, left, top, right, bottom);
-        int measuredWidth = this.getMeasuredWidth();
-        int measuredHeight = this.getMeasuredHeight();
-        float meshWidth = measuredWidth * this.mMeshScale;
-        float meshHeight = measuredHeight * this.mMeshScale;
-        this.mMeshLeft = (measuredWidth - meshWidth) / 2F;
-        this.mMeshTop = (measuredHeight - meshHeight) / 2F;
-        this.mMeshRight = measuredWidth - this.mMeshLeft;
-        this.mMeshBottom = measuredHeight - this.mMeshTop;
-        initGridFillPaint(0, this.mMeshTop, 0, this.mMeshBottom);
-        initGridStrokePaint(0, this.mMeshTop, 0, this.mMeshBottom);
-        initMeshBoard(this.mMeshLeft, this.mMeshTop, meshWidth, meshHeight);
-        initGridPath(this.mMeshLeft, this.mMeshTop, meshWidth, meshHeight);
-        initAnimation(this.mMeshTop - meshHeight, this.mMeshTop + meshHeight * 0.5F);
-    }
-
-    private void initAnimation(float... values) {
-        this.mGridAnimator = new ValueAnimator();
-        mGridAnimator.setDuration(2000L);
-        mGridAnimator.setFloatValues(values);
-        mGridAnimator.setRepeatMode(ValueAnimator.RESTART);
+    private void init() {
+        this.mMesh = new Path();
+        this.mBorder = new RectF();
+        this.mMeshMinorCount = 20;
+        this.mBorderFillColors = new int[]{Color.TRANSPARENT, Color.argb(100, 255, 0, 0)};
+        this.mMeshStrokeColors = new int[]{Color.TRANSPARENT, Color.argb(255, 255, 0, 0)};
+        this.mPositions = new float[]{0.5F, 1F};
+        this.mBorderFillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        this.mBorderFillPaint.setStyle(Paint.Style.FILL);
+        this.mMeshStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        this.mMeshStrokePaint.setStyle(Paint.Style.STROKE);
+        this.mMeshStrokePaint.setStrokeWidth(1F);
+        this.mIsAutoReverse = false;
         TimeInterpolator interpolator = new LinearInterpolator();
-        mGridAnimator.setInterpolator(interpolator);
-        mGridAnimator.setRepeatCount(Integer.MAX_VALUE);
-        mGridAnimator.addUpdateListener(animation -> {
-            mOffset = (float) animation.getAnimatedValue();
+        this.mCursorAnimator = new ValueAnimator();
+        this.mCursorAnimator.setDuration(3000L);
+        int repeatMode = this.mIsAutoReverse ? ValueAnimator.REVERSE : ValueAnimator.RESTART;
+        this.mCursorAnimator.setRepeatMode(repeatMode);
+        this.mCursorAnimator.setInterpolator(interpolator);
+        this.mCursorAnimator.setRepeatCount(ValueAnimator.INFINITE);
+        this.mCursorAnimator.addListener(new Animator.AnimatorListener() {
+            @Override
+            public void onAnimationStart(Animator animation) {
+                mCurrentCount = 0;
+            }
+
+            @Override
+            public void onAnimationEnd(Animator animation) {
+            }
+
+            @Override
+            public void onAnimationCancel(Animator animation) {
+
+            }
+
+            @Override
+            public void onAnimationRepeat(Animator animation) {
+                mCurrentCount++;
+            }
+        });
+        this.mCursorAnimator.addUpdateListener(animation -> {
+            mYCursor = (float) animation.getAnimatedValue();
             invalidate();
         });
-        mGridAnimator.start();
+    }
+
+    private void updatePaints(float left, float top, float right, float bottom) {
+        float width = right - left;
+        float height = bottom - top;
+        // 根据宽高计算着色器尺寸
+        float x0, y0, x1, y1;
+        x0 = 0;
+        y0 = top;
+        x1 = 0;
+        y1 = bottom;
+        // TODO: 此处未实现复用
+        Shader borderShader = new LinearGradient(x0, y0, x1, y1, this.mBorderFillColors, this.mPositions, Shader.TileMode.CLAMP);
+        this.mBorderFillPaint.setShader(borderShader);
+        Shader meshShader = new LinearGradient(x0, y0, x1, y1, this.mMeshStrokeColors, this.mPositions, Shader.TileMode.CLAMP);
+        this.mMeshStrokePaint.setShader(meshShader);
+    }
+
+    private void updateShapes(float left, float top, float right, float bottom) {
+        if (left == right || top == bottom || this.mMeshMinorCount <= 0) {
+            return;
+        }
+        // 更新 Border
+        this.mBorder.left = left;
+        this.mBorder.top = top;
+        this.mBorder.right = right;
+        this.mBorder.bottom = bottom;
+        // 更新 Mesh
+        this.mMesh.reset();
+        float width = Math.abs(right - left);
+        float height = Math.abs(bottom - top);
+        // 根据宽高计算网格尺寸
+        float offset = width < height
+                ? width / this.mMeshMinorCount
+                : height / this.mMeshMinorCount;
+        // Columns 列, 从右向左画线, 保证可见边缘均有线
+        float x = right;
+        while (x >= 0) {
+            this.mMesh.moveTo(x, top);
+            this.mMesh.lineTo(x, bottom);
+            x -= offset;
+        }
+        // Rows 行, 自下而上画线, 保证可见边缘均有线
+        float y = bottom;
+        while (y >= 0) {
+            this.mMesh.moveTo(left, y);
+            this.mMesh.lineTo(right, y);
+            y -= offset;
+        }
+    }
+
+    private void updateAnimation(float left, float top, float right, float bottom) {
+        // 重置动画状态
+        this.mXCursor = 0;
+        this.mYCursor = 0;
+        this.mCursorAnimator.cancel();
+        float height = bottom - top;
+        float from = top - height;
+        float to = top + height;
+        mCursorAnimator.setFloatValues(from, to);
+        mCursorAnimator.start();
     }
 
     @Override
-    public void draw(Canvas canvas) {
-        super.draw(canvas);
-        // 画边框
+    protected void coreLayout(float left, float top, float right, float bottom) {
+        updatePaints(left, top, right, bottom);
+        updateShapes(left, top, right, bottom);
+        updateAnimation(left, top, right, bottom);
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        //region 1. 画当前网格
+        float dx1 = this.mXCursor;
+        float dy1 = this.mYCursor;
         // 临时剪裁并平移画布
         canvas.save();
-        canvas.clipRect(this.mMeshLeft, this.mMeshTop, this.mMeshRight, this.mMeshBottom);
-        canvas.translate(0, this.mOffset);
+        canvas.clipRect(this.mBorder);
+        canvas.translate(dx1, dy1);
         // 画渐变填充
-        canvas.drawRect(this.mMeshBoard, this.mGridFillPaint);
+        canvas.drawRect(this.mBorder, this.mBorderFillPaint);
         // 画扫描线
-        canvas.drawPath(this.mMeshGrid, this.mGridStrokePaint);
+        canvas.drawPath(this.mMesh, this.mMeshStrokePaint);
         // 恢复画布
         canvas.restore();
+        //endregion
+        //region 2. 若上方有空余, 补画网格
+        float height = this.mBorder.height();
+        float dy2 = dy1 - height;
+        if (dy1 > this.mBorder.top && dy1 < this.mBorder.bottom) {
+            // 临时剪裁并平移画布
+            canvas.save();
+            canvas.clipRect(this.mBorder);
+            canvas.translate(dx1, dy2);
+            // 画渐变填充
+            canvas.drawRect(this.mBorder, this.mBorderFillPaint);
+            // 画扫描线
+            canvas.drawPath(this.mMesh, this.mMeshStrokePaint);
+            // 恢复画布
+            canvas.restore();
+        }
+        //endregion
+        //region 3. 若非第一次循环且下方有空余, 补画网格
+        float dy3 = dy1 + height;
+        if (mCurrentCount > 0 && dy3 > this.mBorder.top && dy3 < this.mBorder.bottom) {
+            // 临时剪裁并平移画布
+            canvas.save();
+            canvas.clipRect(this.mBorder);
+            canvas.translate(dx1, dy3);
+            // 画渐变填充
+            canvas.drawRect(this.mBorder, this.mBorderFillPaint);
+            // 画扫描线
+            canvas.drawPath(this.mMesh, this.mMeshStrokePaint);
+            // 恢复画布
+            canvas.restore();
+        }
+        //endregion
     }
 }
