@@ -1,7 +1,5 @@
 package dev.yanshouwang.codescanner.util;
 
-import dev.yanshouwang.codescanner.common.NV21Wrapper;
-
 public class NV21Utils {
     public static byte[] spin(byte[] data, int dataWidth, int dataHeight, int degrees) {
         degrees %= 360;
